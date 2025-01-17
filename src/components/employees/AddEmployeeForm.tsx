@@ -8,35 +8,27 @@ import { NewEmployee, EmployeePosition } from "@/types/employee";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { formatDateForApi } from "@/utils/dateUtils";
+import { AnyObject } from "yup";
 
 interface Props {
   onSuccess: () => void;
 }
 
-const validationSchema = yup.object().shape({
-  name: yup
-    .string()
-    .required("Name is required")
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must not exceed 100 characters")
-    .trim(),
-  position: yup
-    .string()
-    .required("Position is required")
-    .min(2, "Position must be at least 2 characters")
-    .max(50, "Position must not exceed 50 characters"),
-  hireDate: yup
-    .string()
-    .required("Hire date is required")
-    .test(
-      "not-future",
-      "Hire date cannot be in the future",
-      (value) => !value || new Date(value) <= new Date()
-    ),
-  id: yup.number().required("ID is required"),
-  directReports: yup.array().of(yup.number().required()).default([]),
-  active: yup.boolean().default(true),
+const validationSchema = yup.object({
+  name: yup.string().required(),
+  position: yup.string().oneOf(Object.values(EmployeePosition)).required(),
+  hireDate: yup.string().required(),
+  directReports: yup.array().of(yup.number()).transform((value) => value || []),
+  active: yup.boolean().transform((value) => value ?? true),
 });
+
+type FormData = {
+  name: string;
+  position: EmployeePosition;
+  hireDate: string;
+  directReports: number[];
+  active: boolean;
+};
 
 export const AddEmployeeForm: React.FC<Props> = ({ onSuccess }) => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -46,7 +38,7 @@ export const AddEmployeeForm: React.FC<Props> = ({ onSuccess }) => {
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<NewEmployee>({
+  } = useForm<FormData>({
     resolver: yupResolver(validationSchema),
     defaultValues: {
       directReports: [],
@@ -58,9 +50,17 @@ export const AddEmployeeForm: React.FC<Props> = ({ onSuccess }) => {
     return Math.floor(Math.random() * 900) + 100;
   };
 
-  const onSubmit = async (data: NewEmployee) => {
+  const onSubmit = async (data: {
+    name: string;
+    position: EmployeePosition;
+    hireDate: string;
+    directReports: number[];
+    active: boolean;
+  }) => {
     try {
-      const formattedData = {
+      console.log("Form submitted with data:", data);
+
+      const formattedData: NewEmployee = {
         id: generateRandomId(),
         name: data.name.trim(),
         position: data.position,
@@ -69,12 +69,15 @@ export const AddEmployeeForm: React.FC<Props> = ({ onSuccess }) => {
         hireDate: formatDateForApi(data.hireDate),
       };
 
+      console.log("Formatted data:", formattedData);
+
       await createEmployee(formattedData);
       setIsOpen(false);
       reset();
       onSuccess();
     } catch (error: any) {
       console.error("Failed to create employee:", error);
+      alert("Failed to create employee. Please try again.");
     }
   };
 
