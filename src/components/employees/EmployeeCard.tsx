@@ -65,7 +65,10 @@ export const EmployeeCard: React.FC<Props> = ({
 
         <div className="mt-6 flex justify-end">
           <button
-            onClick={() => setShowConfirmModal(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowConfirmModal(true);
+            }}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
           >
             Deactivate
